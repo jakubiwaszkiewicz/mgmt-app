@@ -1,0 +1,1 @@
+server - directory which conatins backend such as database config (config dir), models for mongodb (models dir), 
