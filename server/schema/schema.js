@@ -1,6 +1,10 @@
 // This file is the schema of the graphql, it's like the database schema but for graphql
 const { projects, clients } = require('../sampleData');
 
+// Moongoose models for the database (work with MongoDB like schemas)
+const Project = require('../models/Project');
+const Client = require('../models/Client');
+
 // We need to import some things from graphql
 const {
     GraphQLObjectType,
@@ -26,10 +30,16 @@ const ProjectType = new GraphQLObjectType({
     name: 'Project',
     fields: {
         id: { type: GraphQLID },
-        clientId: { type: GraphQLID },
         name: { type: GraphQLString },
         description: { type: GraphQLString },
-        status: { type: GraphQLString }
+        status: { type: GraphQLString },
+        clientId: {
+            type: GraphQLID,
+            // Parent is just the project object
+            resolve(parent, args) {
+                return Client.findById(parent.clientId);
+            }
+        },
     }
 });
 
@@ -47,7 +57,8 @@ const RootQuery = new GraphQLObjectType({
             },
             // The resolve function will return the client with the id that we pass in the args
             resolve(parent, args) { 
-                return clients.find(client => client.id === args.id);
+                // findById is a mongoose method that find the client by id
+                return Client.findById(args.id);
             }
         },
         // The project field will return a single client depends on the id
@@ -58,7 +69,8 @@ const RootQuery = new GraphQLObjectType({
             },
             // The resolve function will return the project with the id that we pass in the args
             resolve (parent, args) {
-                return projects.find(project => project.id === args.id);
+                // findById is a mongoose method that find the project by id
+                return Project.findById(args.id);
             }
         },
         // The clients field will return a list of clients so the type is GraphQLList of ClientType
@@ -66,7 +78,8 @@ const RootQuery = new GraphQLObjectType({
             type: new GraphQLList(ClientType),
             // The resolve function will return the list of clients
             resolve (parent, args) {
-                return clients;
+                // Returning the clients from the database
+                return Client.find();
             }
         },
         // The clients field will return a list of clients so the type is GraphQLList of ClientType
@@ -74,7 +87,8 @@ const RootQuery = new GraphQLObjectType({
             types: new GraphQLList(ProjectType),
             // The resolve function will return the list of projects
             resolve (parent, args) {
-                return projects;
+                // Returning the projects from the database
+                return Project.find();
             }
         }
     }
