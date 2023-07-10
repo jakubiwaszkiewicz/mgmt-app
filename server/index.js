@@ -27,4 +27,3 @@ app.use('/graphql',
 // Starting the server on port 5000 or the port in the .env file
 app.listen(port, () => {console.log(`Server is running on port ${port}`)});
 
-// 48:33

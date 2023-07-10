@@ -1,20 +1,23 @@
 // This file is the schema of the graphql, it's like the database schema but for graphql
-const { projects, clients } = require('../sampleData');
+// This module was used to test the graphql queries without connected Mdb
+// const { projects, clients } = require('../sampleData');
 
-// Moongoose models for the database (work with MongoDB like schemas)
+// Moongoose models for the database (work with MongoDB like schemas in GraphQL)
 const Project = require('../models/Project');
 const Client = require('../models/Client');
 
-// We need to import some things from graphql
+// We need to import some conversion tools from graphql
 const {
     GraphQLObjectType,
     GraphQLID,
     GraphQLString,
     GraphQLSchema,
-    GraphQLList
+    GraphQLList,
+    GraphQLNonNull,
+    GraphQLEnumType
 } = require('graphql');
 
-// Creating a type for Client data which is in the sampleData.js 
+// Creating a GraphQL type for "Client" object
 const ClientType = new GraphQLObjectType({
     name: 'Client',
     fields: {
@@ -25,7 +28,7 @@ const ClientType = new GraphQLObjectType({
     }
 });
 
-// Creating a type for Project data which is in the sampleData.js 
+// Creating a GraphQL type for "Project" object
 const ProjectType = new GraphQLObjectType({
     name: 'Project',
     fields: {
@@ -34,7 +37,7 @@ const ProjectType = new GraphQLObjectType({
         description: { type: GraphQLString },
         status: { type: GraphQLString },
         clientId: {
-            type: GraphQLID,
+            type: ClientType,
             // Parent is just the project object
             resolve(parent, args) {
                 return Client.findById(parent.clientId);
@@ -84,7 +87,7 @@ const RootQuery = new GraphQLObjectType({
         },
         // The clients field will return a list of clients so the type is GraphQLList of ClientType
         projects: {
-            types: new GraphQLList(ProjectType),
+            type: new GraphQLList(ProjectType),
             // The resolve function will return the list of projects
             resolve (parent, args) {
                 // Returning the projects from the database
@@ -121,8 +124,123 @@ RootQuery is the entry point for the graphql queries, so if we want to get the d
             }
         }
 */
+// The mutation is the place where we write the code to add, update or delete data from the database (GraphQL is not only for getting data, it's also for adding, updating and deleting data like RestAPI)
+const mutation = new GraphQLObjectType({
+    name: 'Mutation',
+    fields: {
+        // The addClient field will add a new client to the database
+        addClient: {
+            type: ClientType,
+            // The args are the fields that we need to add a new client
+            args: {
+                // The GraphQLNonNull is a validation that the field is required
+                name: { type: GraphQLNonNull(GraphQLString) },
+                email: { type: GraphQLNonNull(GraphQLString) },
+                phone: { type: GraphQLNonNull(GraphQLString) },
+            },
+            resolve(parent, args) {
+                // Creating a new client object which will be saved in the database
+                const client = new Client({
+                    name: args.name,
+                    email: args.email,
+                    phone: args.phone
+                });
+                // Saving the client in the database
+                return client.save();
+            }
+        },
+        // The addProject field will add a new project to the database
+        addProject: {
+            type: ProjectType,
+            args: {
+                name: { type: GraphQLNonNull(GraphQLString) },
+                description: { type: GraphQLNonNull(GraphQLString) },
+                status: {
+                    type: new GraphQLEnumType({
+                        name: 'ProjectStatus',
+                        values: {
+                            'NOT_STARTED': { value: 'Not Started' },
+                            'IN_PROGRESS': { value: 'In Progress' },
+                            'COMPLETED': { value: 'Completed' },
+                        }
+                    }),
+                    defaultValue: 'Not Started'
+                },
+                clientId: { type: GraphQLNonNull(GraphQLID) },
+            },
+            resolve(parent, args) {
+                const project = new Project({
+                    name: args.name,
+                    description: args.description,
+                    status: args.status,
+                    clientId: args.clientId
+                });
+                return project.save();
+            }
+        },
+        // The updateClient field will update a client in the database
+        deleteClient: {
+            type: ClientType,
+            // The args are the fields that we need to update a client
+            args: {
+                id: { type: GraphQLNonNull(GraphQLID) },
+            },
+            // The resolve function will return the client with the id that we pass in the args
+            resolve(parent, args) {
+                return Client.findByIdAndRemove(args.id);
+            }
+        },
+        deleteProject: {
+            type: ProjectType,
+            args: {
+                id: { type: GraphQLNonNull(GraphQLID) },
+            },
+            resolve(parent, args) {
+                return Project.findByIdAndRemove(args.id);
+            }
+        },
+        // The updateClient field will update a client in the database
+        updateProject: {
+            type: ProjectType,
+            args: {
+                id: { type: GraphQLNonNull(GraphQLID) },
+                name: { type: GraphQLString },
+                description: { type: GraphQLString },
+                // The status field is an enum type so we need to define it
+                status: {
+                    type: new GraphQLEnumType({
+                        name: 'ProjectStatusUpdate',
+                        values: {
+                            'NOT_STARTED': { value: 'Not Started' },
+                            'IN_PROGRESS': { value: 'In Progress' },
+                            'COMPLETED': { value: 'Completed' },
+                        }
+                    }),
+                },
+                clientId: { type: GraphQLID },
+            },
+            // The resolve function will return the client with the id that we pass in the args will be updated with the new name, desc. and status
+            resolve(parent, args) {
+                return Project.findByIdAndUpdate(
+                    args.id,
+                    {
+                        // $set is a mongoose method that will update the fields that we pass
+                        $set: {
+                            name: args.name,
+                            description: args.description,
+                            status: args.status,
+                            clientId: args.clientId
+                        }
+                    },
+                    { new: true }
+                );
+            }
+        }
+    }
+})
 
 
 module.exports = new GraphQLSchema({
-    query: RootQuery
+    query: RootQuery,
+    mutation
 });
