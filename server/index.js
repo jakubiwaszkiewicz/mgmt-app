@@ -5,6 +5,8 @@ const colors = require('colors');
 require('dotenv').config();
 // The express-graphql module provides a simple way to create an Express server that runs a GraphQL API.
 const { graphqlHTTP } = require('express-graphql');
+// The cors module is a middleware that can be used to enable CORS with various options.
+const cors = require('cors');
 const schema = require('./schema/schema.js');
 const connectDB = require('./config/db.js');
 const port = process.env.PORT || 5000;
@@ -13,6 +15,9 @@ const port = process.env.PORT || 5000;
 const app = express();
 
 connectDB();
+
+// Adding the cors middleware
+app.use(cors());
 
 // Creating the graphql endpoint dev: http://localhost:5000/graphql
 app.use('/graphql',

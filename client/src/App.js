@@ -1,24 +1,25 @@
-import logo from './logo.svg';
-import './App.css';
+import Clients from './components/Clients';
+import Header from './components/Header';
+
+import { ApolloProvider, ApolloClient, InMemoryCache } from '@apollo/client';
+
+// Apollo Client Setup which is used to connect to the GraphQL Server cache is used to store the data in the client side
+const client = new ApolloClient({
+  uri: 'http://localhost:5000/graphql',
+  cache: new InMemoryCache()
+});
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+      {/* The ApolloProvider is similar to the Context Provider, it wraps the entire application and allows us to access the data from anywhere in the application */}
+      <ApolloProvider client={client}>
+        <Header/>
+        <div className='container'>
+          <Clients />
+        </div>
+      </ApolloProvider>
+    </>
   );
 }
 
